@@ -13,8 +13,8 @@ T MessageQueue<T>::receive()
     // The received object should then be returned by the receive function. 
     std::unique_lock<std::mutex> lock(_mtx);
     _condition.wait(lock, [this] {return !_queue.empty();});
-    T msg = std::move(_queue.front());
-    _queue.pop_front();
+    T msg = std::move(_queue.back());
+    _queue.clear();
     return msg;
 }
 
@@ -43,7 +43,8 @@ void TrafficLight::waitForGreen()
     // runs and repeatedly calls the receive function on the message queue. 
     // Once it receives TrafficLightPhase::green, the method returns.
     while (true){
-        if (_messageQueue.receive() == TrafficLightPhase::green) return;
+        auto status = _messageQueue.receive();
+        if (status == TrafficLightPhase::green) return;
     }
     
 }
@@ -86,18 +87,18 @@ void TrafficLight::cycleThroughPhases()
             {
             case TrafficLightPhase::red:
                 _currentPhase = TrafficLightPhase::green;
-                _messageQueue.send(std::move(TrafficLightPhase::green));
+                //_messageQueue.send(std::move(TrafficLightPhase::green));
                 //message to queue ? or after switch case ie send for every change or only when back to green?
                 //_condition.notify_one();
                 break;
             case TrafficLightPhase::green:
                 _currentPhase = TrafficLightPhase::red;
-                _messageQueue.send(std::move(TrafficLightPhase::red));
+                //_messageQueue.send(std::move(TrafficLightPhase::red));
                 //message to queue ? or after switch case ie send for every change or only when back to green?
                 //_condition.notify_one();
                 break;
             }
-
+            _messageQueue.send(std::move(_currentPhase));
             //unlock now light is toggled
             lock.unlock();
 
